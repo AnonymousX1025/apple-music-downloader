@@ -853,6 +853,7 @@ func ripTrack(track *task.Track, token string, mediaUserToken string) {
 		"{DiscNumber}", fmt.Sprintf("%0d", track.Resp.Attributes.DiscNumber),
 		"{TrackNumber}", fmt.Sprintf("%0d", track.Resp.Attributes.TrackNumber),
 		"{Quality}", Quality,
+		"{ArtistName}", LimitString(track.Resp.Attributes.ArtistName),
 		"{Tag}", Tag_string,
 		"{Codec}", track.Codec,
 	).Replace(Config.SongFileFormat)
