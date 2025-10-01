@@ -38,17 +38,17 @@ import (
 
 var (
 	forbiddenNames = regexp.MustCompile(`[/\\<>:"|?*]`)
-	dl_atmos       bool
-	dl_aac         bool
-	dl_select      bool
-	dl_song        bool
-	artist_select  bool
-	debug_mode     bool
-	alac_max       *int
-	atmos_max      *int
-	mv_max         *int
-	mv_audio_type  *string
-	aac_type       *string
+	dlAtmos        bool
+	dlAac          bool
+	dlSelect       bool
+	dlSong         bool
+	artistSelect   bool
+	debugMode      bool
+	alacMax        *int
+	atmosMax       *int
+	mvMax          *int
+	mvAudioType    *string
+	aacType        *string
 	Config         structs.ConfigSet
 	counter        structs.Counter
 	okDict         = make(map[string][]int)
@@ -262,7 +262,7 @@ func checkArtist(artistUrl string, token string, relationship string) ([]string,
 		table.Append(options[i])
 	}
 	table.Render()
-	if artist_select {
+	if artistSelect {
 		fmt.Println("You have selected all options:")
 		return urls, nil
 	}
@@ -446,16 +446,16 @@ type QualityOption struct {
 
 // setDlFlags configures the global download flags based on the user's quality selection.
 func setDlFlags(quality string) {
-	dl_atmos = false
-	dl_aac = false
+	dlAtmos = false
+	dlAac = false
 
 	switch quality {
 	case "atmos":
-		dl_atmos = true
+		dlAtmos = true
 		fmt.Println("Quality set to: Dolby Atmos")
 	case "aac":
-		dl_aac = true
-		*aac_type = "aac"
+		dlAac = true
+		*aacType = "aac"
 		fmt.Println("Quality set to: High-Quality (AAC)")
 	case "alac":
 		fmt.Println("Quality set to: Lossless (ALAC)")
@@ -476,7 +476,7 @@ func promptForQuality(item SearchResultItem, token string) (string, error) {
 		{ID: "aac", Description: "High-Quality (AAC)"},
 		{ID: "atmos", Description: "Dolby Atmos"},
 	}
-	qualityOptions := []string{}
+	var qualityOptions []string
 	for _, q := range qualities {
 		qualityOptions = append(qualityOptions, q.Description)
 	}
@@ -614,7 +614,7 @@ func handleSearch(searchType string, queryParts []string, token string) (string,
 
 		// Automatically set single song download flag
 		if selectedItem.Type == "Song" {
-			dl_song = true
+			dlSong = true
 		}
 
 		quality, err := promptForQuality(selectedItem, token)
@@ -784,11 +784,11 @@ func ripTrack(track *task.Track, token string, mediaUserToken string) {
 	}
 
 	needDlAacLc := false
-	if dl_aac && Config.AacType == "aac-lc" {
+	if dlAac && Config.AacType == "aac-lc" {
 		needDlAacLc = true
 	}
 	if track.WebM3u8 == "" && !needDlAacLc {
-		if dl_atmos {
+		if dlAtmos {
 			fmt.Println("Unavailable")
 			counter.Unavailable++
 			return
@@ -803,17 +803,17 @@ func ripTrack(track *task.Track, token string, mediaUserToken string) {
 	} else if Config.GetM3u8Mode == "hires" && contains(track.Resp.Attributes.AudioTraits, "hi-res-lossless") {
 		needCheck = true
 	}
-	var EnhancedHls_m3u8 string
+	var EnhancedhlsM3u8 string
 	if needCheck && !needDlAacLc {
-		EnhancedHls_m3u8, _ = checkM3u8(track.ID, "song")
-		if strings.HasSuffix(EnhancedHls_m3u8, ".m3u8") {
-			track.DeviceM3u8 = EnhancedHls_m3u8
-			track.M3u8 = EnhancedHls_m3u8
+		EnhancedhlsM3u8, _ = checkM3u8(track.ID, "song")
+		if strings.HasSuffix(EnhancedhlsM3u8, ".m3u8") {
+			track.DeviceM3u8 = EnhancedhlsM3u8
+			track.M3u8 = EnhancedhlsM3u8
 		}
 	}
 	var Quality string
 	if strings.Contains(Config.SongFileFormat, "Quality") {
-		if dl_atmos {
+		if dlAtmos {
 			Quality = fmt.Sprintf("%dKbps", Config.AtmosMax-2000)
 		} else if needDlAacLc {
 			Quality = "256Kbps"
@@ -844,7 +844,7 @@ func ripTrack(track *task.Track, token string, mediaUserToken string) {
 			stringsToJoin = append(stringsToJoin, Config.CleanChoice)
 		}
 	}
-	Tag_string := strings.Join(stringsToJoin, " ")
+	TagString := strings.Join(stringsToJoin, " ")
 
 	songName := strings.NewReplacer(
 		"{SongId}", track.ID,
@@ -854,7 +854,7 @@ func ripTrack(track *task.Track, token string, mediaUserToken string) {
 		"{TrackNumber}", fmt.Sprintf("%0d", track.Resp.Attributes.TrackNumber),
 		"{Quality}", Quality,
 		"{ArtistName}", LimitString(track.Resp.Attributes.ArtistName),
-		"{Tag}", Tag_string,
+		"{Tag}", TagString,
 		"{Codec}", track.Codec,
 	).Replace(Config.SongFileFormat)
 	fmt.Println(songName)
@@ -997,9 +997,9 @@ func ripStation(albumId string, token string, storefront string, mediaUserToken 
 	meta := station.Resp
 
 	var Codec string
-	if dl_atmos {
+	if dlAtmos {
 		Codec = "ATMOS"
-	} else if dl_aac {
+	} else if dlAac {
 		Codec = "AAC"
 	} else {
 		Codec = "ALAC"
@@ -1177,7 +1177,7 @@ func ripAlbum(albumId string, token string, storefront string, mediaUserToken st
 		return err
 	}
 	meta := album.Resp
-	if debug_mode {
+	if debugMode {
 		fmt.Println(meta.Data[0].Attributes.ArtistName)
 		fmt.Println(meta.Data[0].Attributes.Name)
 
@@ -1220,9 +1220,9 @@ func ripAlbum(albumId string, token string, storefront string, mediaUserToken st
 		return nil
 	}
 	var Codec string
-	if dl_atmos {
+	if dlAtmos {
 		Codec = "ATMOS"
-	} else if dl_aac {
+	} else if dlAac {
 		Codec = "AAC"
 	} else {
 		Codec = "ALAC"
@@ -1256,9 +1256,9 @@ func ripAlbum(albumId string, token string, storefront string, mediaUserToken st
 	album.SaveDir = downloadsDir
 	var Quality string
 	if strings.Contains(Config.AlbumFolderFormat, "Quality") {
-		if dl_atmos {
+		if dlAtmos {
 			Quality = fmt.Sprintf("%dKbps", Config.AtmosMax-2000)
-		} else if dl_aac && Config.AacType == "aac-lc" {
+		} else if dlAac && Config.AacType == "aac-lc" {
 			Quality = "256Kbps"
 		} else {
 			manifest1, err := ampapi.GetSongResp(storefront, meta.Data[0].Relationships.Tracks.Data[0].ID, album.Language, token)
@@ -1276,11 +1276,11 @@ func ripAlbum(albumId string, token string, storefront string, mediaUserToken st
 					} else if Config.GetM3u8Mode == "hires" && contains(meta.Data[0].Relationships.Tracks.Data[0].Attributes.AudioTraits, "hi-res-lossless") {
 						needCheck = true
 					}
-					var EnhancedHls_m3u8 string
+					var EnhancedhlsM3u8 string
 					if needCheck {
-						EnhancedHls_m3u8, _ = checkM3u8(meta.Data[0].Relationships.Tracks.Data[0].ID, "album")
-						if strings.HasSuffix(EnhancedHls_m3u8, ".m3u8") {
-							manifest1.Data[0].Attributes.ExtendedAssetUrls.EnhancedHls = EnhancedHls_m3u8
+						EnhancedhlsM3u8, _ = checkM3u8(meta.Data[0].Relationships.Tracks.Data[0].ID, "album")
+						if strings.HasSuffix(EnhancedhlsM3u8, ".m3u8") {
+							manifest1.Data[0].Attributes.ExtendedAssetUrls.EnhancedHls = EnhancedhlsM3u8
 						}
 					}
 					_, Quality, err = extractMedia(manifest1.Data[0].Attributes.ExtendedAssetUrls.EnhancedHls, true)
@@ -1291,7 +1291,7 @@ func ripAlbum(albumId string, token string, storefront string, mediaUserToken st
 			}
 		}
 	}
-	stringsToJoin := []string{}
+	var stringsToJoin []string
 	if meta.Data[0].Attributes.IsAppleDigitalMaster || meta.Data[0].Attributes.IsMasteredForItunes {
 		if Config.AppleMasterChoice != "" {
 			stringsToJoin = append(stringsToJoin, Config.AppleMasterChoice)
@@ -1307,7 +1307,7 @@ func ripAlbum(albumId string, token string, storefront string, mediaUserToken st
 			stringsToJoin = append(stringsToJoin, Config.CleanChoice)
 		}
 	}
-	Tag_string := strings.Join(stringsToJoin, " ")
+	TagString := strings.Join(stringsToJoin, " ")
 	var albumFolderName string
 	albumFolderName = strings.NewReplacer(
 		"{ReleaseDate}", meta.Data[0].Attributes.ReleaseDate,
@@ -1320,7 +1320,7 @@ func ripAlbum(albumId string, token string, storefront string, mediaUserToken st
 		"{AlbumId}", albumId,
 		"{Quality}", Quality,
 		"{Codec}", Codec,
-		"{Tag}", Tag_string,
+		"{Tag}", TagString,
 	).Replace(Config.AlbumFolderFormat)
 
 	if strings.HasSuffix(albumFolderName, ".") {
@@ -1406,7 +1406,7 @@ func ripAlbum(albumId string, token string, storefront string, mediaUserToken st
 		arr[i] = i + 1
 	}
 
-	if dl_song {
+	if dlSong {
 		if urlArg_i == "" {
 		} else {
 			for i := range album.Tracks {
@@ -1419,7 +1419,7 @@ func ripAlbum(albumId string, token string, storefront string, mediaUserToken st
 		return nil
 	}
 	var selected []int
-	if !dl_select {
+	if !dlSelect {
 		selected = arr
 	} else {
 		selected = album.ShowSelect()
@@ -1446,7 +1446,7 @@ func ripPlaylist(playlistId string, token string, storefront string, mediaUserTo
 		return err
 	}
 	meta := playlist.Resp
-	if debug_mode {
+	if debugMode {
 		fmt.Println(meta.Data[0].Attributes.ArtistName)
 		fmt.Println(meta.Data[0].Attributes.Name)
 
@@ -1489,9 +1489,9 @@ func ripPlaylist(playlistId string, token string, storefront string, mediaUserTo
 		return nil
 	}
 	var Codec string
-	if dl_atmos {
+	if dlAtmos {
 		Codec = "ATMOS"
-	} else if dl_aac {
+	} else if dlAac {
 		Codec = "AAC"
 	} else {
 		Codec = "ALAC"
@@ -1518,9 +1518,9 @@ func ripPlaylist(playlistId string, token string, storefront string, mediaUserTo
 
 	var Quality string
 	if strings.Contains(Config.AlbumFolderFormat, "Quality") {
-		if dl_atmos {
+		if dlAtmos {
 			Quality = fmt.Sprintf("%dKbps", Config.AtmosMax-2000)
-		} else if dl_aac && Config.AacType == "aac-lc" {
+		} else if dlAac && Config.AacType == "aac-lc" {
 			Quality = "256Kbps"
 		} else {
 			manifest1, err := ampapi.GetSongResp(storefront, meta.Data[0].Relationships.Tracks.Data[0].ID, playlist.Language, token)
@@ -1538,11 +1538,11 @@ func ripPlaylist(playlistId string, token string, storefront string, mediaUserTo
 					} else if Config.GetM3u8Mode == "hires" && contains(meta.Data[0].Relationships.Tracks.Data[0].Attributes.AudioTraits, "hi-res-lossless") {
 						needCheck = true
 					}
-					var EnhancedHls_m3u8 string
+					var EnhancedhlsM3u8 string
 					if needCheck {
-						EnhancedHls_m3u8, _ = checkM3u8(meta.Data[0].Relationships.Tracks.Data[0].ID, "album")
-						if strings.HasSuffix(EnhancedHls_m3u8, ".m3u8") {
-							manifest1.Data[0].Attributes.ExtendedAssetUrls.EnhancedHls = EnhancedHls_m3u8
+						EnhancedhlsM3u8, _ = checkM3u8(meta.Data[0].Relationships.Tracks.Data[0].ID, "album")
+						if strings.HasSuffix(EnhancedhlsM3u8, ".m3u8") {
+							manifest1.Data[0].Attributes.ExtendedAssetUrls.EnhancedHls = EnhancedhlsM3u8
 						}
 					}
 					_, Quality, err = extractMedia(manifest1.Data[0].Attributes.ExtendedAssetUrls.EnhancedHls, true)
@@ -1553,7 +1553,7 @@ func ripPlaylist(playlistId string, token string, storefront string, mediaUserTo
 			}
 		}
 	}
-	stringsToJoin := []string{}
+	var stringsToJoin []string
 	if meta.Data[0].Attributes.IsAppleDigitalMaster || meta.Data[0].Attributes.IsMasteredForItunes {
 		if Config.AppleMasterChoice != "" {
 			stringsToJoin = append(stringsToJoin, Config.AppleMasterChoice)
@@ -1569,14 +1569,14 @@ func ripPlaylist(playlistId string, token string, storefront string, mediaUserTo
 			stringsToJoin = append(stringsToJoin, Config.CleanChoice)
 		}
 	}
-	Tag_string := strings.Join(stringsToJoin, " ")
+	TagString := strings.Join(stringsToJoin, " ")
 	playlistFolder := strings.NewReplacer(
 		"{ArtistName}", "Apple Music",
 		"{PlaylistName}", LimitString(meta.Data[0].Attributes.Name),
 		"{PlaylistId}", playlistId,
 		"{Quality}", Quality,
 		"{Codec}", Codec,
-		"{Tag}", Tag_string,
+		"{Tag}", TagString,
 	).Replace(Config.PlaylistFolderFormat)
 	if strings.HasSuffix(playlistFolder, ".") {
 		playlistFolder = strings.ReplaceAll(playlistFolder, ".", "")
@@ -1656,7 +1656,7 @@ func ripPlaylist(playlistId string, token string, storefront string, mediaUserTo
 	}
 	var selected []int
 
-	if !dl_select {
+	if !dlSelect {
 		selected = arr
 	} else {
 		selected = playlist.ShowSelect()
@@ -1779,19 +1779,19 @@ func main() {
 			return
 		}
 	}
-	var search_type string
-	pflag.StringVar(&search_type, "search", "", "Search for 'album', 'song', or 'artist'. Provide query after flags.")
-	pflag.BoolVar(&dl_atmos, "atmos", false, "Enable atmos download mode")
-	pflag.BoolVar(&dl_aac, "aac", false, "Enable adm-aac download mode")
-	pflag.BoolVar(&dl_select, "select", false, "Enable selective download")
-	pflag.BoolVar(&dl_song, "song", false, "Enable single song download mode")
-	pflag.BoolVar(&artist_select, "all-album", false, "Download all artist albums")
-	pflag.BoolVar(&debug_mode, "debug", false, "Enable debug mode to show audio quality information")
-	alac_max = pflag.Int("alac-max", Config.AlacMax, "Specify the max quality for download alac")
-	atmos_max = pflag.Int("atmos-max", Config.AtmosMax, "Specify the max quality for download atmos")
-	aac_type = pflag.String("aac-type", Config.AacType, "Select AAC type, aac aac-binaural aac-downmix")
-	mv_audio_type = pflag.String("mv-audio-type", Config.MVAudioType, "Select MV audio type, atmos ac3 aac")
-	mv_max = pflag.Int("mv-max", Config.MVMax, "Specify the max quality for download MV")
+	var searchType string
+	pflag.StringVar(&searchType, "search", "", "Search for 'album', 'song', or 'artist'. Provide query after flags.")
+	pflag.BoolVar(&dlAtmos, "atmos", false, "Enable atmos download mode")
+	pflag.BoolVar(&dlAac, "aac", false, "Enable adm-aac download mode")
+	pflag.BoolVar(&dlSelect, "select", false, "Enable selective download")
+	pflag.BoolVar(&dlSong, "song", false, "Enable single song download mode")
+	pflag.BoolVar(&artistSelect, "all-album", false, "Download all artist albums")
+	pflag.BoolVar(&debugMode, "debug", false, "Enable debug mode to show audio quality information")
+	alacMax = pflag.Int("alac-max", Config.AlacMax, "Specify the max quality for download alac")
+	atmosMax = pflag.Int("atmos-max", Config.AtmosMax, "Specify the max quality for download atmos")
+	aacType = pflag.String("aac-type", Config.AacType, "Select AAC type, aac aac-binaural aac-downmix")
+	mvAudioType = pflag.String("mv-audio-type", Config.MVAudioType, "Select MV audio type, atmos ac3 aac")
+	mvMax = pflag.Int("mv-max", Config.MVMax, "Specify the max quality for download MV")
 
 	pflag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: %s [options] [url1 url2 ...]\n", "[main | main.exe | go run main.go]")
@@ -1801,21 +1801,21 @@ func main() {
 	}
 
 	pflag.Parse()
-	Config.AlacMax = *alac_max
-	Config.AtmosMax = *atmos_max
-	Config.AacType = *aac_type
-	Config.MVAudioType = *mv_audio_type
-	Config.MVMax = *mv_max
+	Config.AlacMax = *alacMax
+	Config.AtmosMax = *atmosMax
+	Config.AacType = *aacType
+	Config.MVAudioType = *mvAudioType
+	Config.MVMax = *mvMax
 
 	args := pflag.Args()
 
-	if search_type != "" {
+	if searchType != "" {
 		if len(args) == 0 {
 			fmt.Println("Error: --search flag requires a query.")
 			pflag.Usage()
 			return
 		}
-		selectedUrl, err := handleSearch(search_type, args, token)
+		selectedUrl, err := handleSearch(searchType, args, token)
 		if err != nil {
 			fmt.Printf("\nSearch process failed: %v\n", err)
 			return
@@ -1863,7 +1863,7 @@ func main() {
 
 			if strings.Contains(urlRaw, "/music-video/") {
 				fmt.Println("Music Video")
-				if debug_mode {
+				if debugMode {
 					continue
 				}
 				counter.Total++
@@ -1914,12 +1914,12 @@ func main() {
 			if err != nil {
 				log.Fatalf("Invalid URL: %v", err)
 			}
-			var urlArg_i = parse.Query().Get("i")
+			var urlargI = parse.Query().Get("i")
 
 			if strings.Contains(urlRaw, "/album/") {
 				fmt.Println("Album")
 				storefront, albumId = checkUrl(urlRaw)
-				err := ripAlbum(albumId, token, storefront, Config.MediaUserToken, urlArg_i)
+				err := ripAlbum(albumId, token, storefront, Config.MediaUserToken, urlargI)
 				if err != nil {
 					fmt.Println("Failed to rip album:", err)
 				}
@@ -1962,7 +1962,7 @@ func mvDownloader(adamID string, saveDir string, token string, storefront string
 		fmt.Println("\u26A0 Failed to get MV manifest:", err)
 		return nil
 	}
-	
+
 	currentDir, _ := os.Getwd()
 	saveDir = filepath.Join(currentDir, "downloads")
 	os.MkdirAll(saveDir, os.ModePerm)
@@ -2209,7 +2209,7 @@ func formatAvailability(available bool, quality string) string {
 	return quality
 }
 
-func extractMedia(b string, more_mode bool) (string, string, error) {
+func extractMedia(b string, moreMode bool) (string, string, error) {
 	masterUrl, err := url.Parse(b)
 	if err != nil {
 		return "", "", err
@@ -2236,7 +2236,7 @@ func extractMedia(b string, more_mode bool) (string, string, error) {
 	sort.Slice(master.Variants, func(i, j int) bool {
 		return master.Variants[i].AverageBandwidth > master.Variants[j].AverageBandwidth
 	})
-	if debug_mode && more_mode {
+	if debugMode && moreMode {
 		fmt.Println("\nDebug: All Available Variants:")
 		var data [][]string
 		for _, variant := range master.Variants {
@@ -2323,20 +2323,20 @@ func extractMedia(b string, more_mode bool) (string, string, error) {
 	}
 	var Quality string
 	for _, variant := range master.Variants {
-		if dl_atmos {
+		if dlAtmos {
 			if variant.Codecs == "ec-3" && strings.Contains(variant.Audio, "atmos") {
-				if debug_mode && !more_mode {
+				if debugMode && !moreMode {
 					fmt.Printf("Debug: Found Dolby Atmos variant - %s (Bitrate: %d Kbps)\n",
 						variant.Audio, variant.Bandwidth/1000)
 				}
 				split := strings.Split(variant.Audio, "-")
 				length := len(split)
-				length_int, err := strconv.Atoi(split[length-1])
+				lengthInt, err := strconv.Atoi(split[length-1])
 				if err != nil {
 					return "", "", err
 				}
-				if length_int <= Config.AtmosMax {
-					if !debug_mode && !more_mode {
+				if lengthInt <= Config.AtmosMax {
+					if !debugMode && !moreMode {
 						fmt.Printf("%s\n", variant.Audio)
 					}
 					streamUrlTemp, err := masterUrl.Parse(variant.URI)
@@ -2348,7 +2348,7 @@ func extractMedia(b string, more_mode bool) (string, string, error) {
 					break
 				}
 			} else if variant.Codecs == "ac-3" { // Add Dolby Audio support
-				if debug_mode && !more_mode {
+				if debugMode && !moreMode {
 					fmt.Printf("Debug: Found Dolby Audio variant - %s (Bitrate: %d Kbps)\n",
 						variant.Audio, variant.Bandwidth/1000)
 				}
@@ -2361,15 +2361,15 @@ func extractMedia(b string, more_mode bool) (string, string, error) {
 				Quality = fmt.Sprintf("%s Kbps", split[len(split)-1])
 				break
 			}
-		} else if dl_aac {
+		} else if dlAac {
 			if variant.Codecs == "mp4a.40.2" {
-				if debug_mode && !more_mode {
+				if debugMode && !moreMode {
 					fmt.Printf("Debug: Found AAC variant - %s (Bitrate: %d)\n", variant.Audio, variant.Bandwidth)
 				}
 				aacregex := regexp.MustCompile(`audio-stereo-\d+`)
 				replaced := aacregex.ReplaceAllString(variant.Audio, "aac")
 				if replaced == Config.AacType {
-					if !debug_mode && !more_mode {
+					if !debugMode && !moreMode {
 						fmt.Printf("%s\n", variant.Audio)
 					}
 					streamUrlTemp, err := masterUrl.Parse(variant.URI)
@@ -2386,12 +2386,12 @@ func extractMedia(b string, more_mode bool) (string, string, error) {
 			if variant.Codecs == "alac" {
 				split := strings.Split(variant.Audio, "-")
 				length := len(split)
-				length_int, err := strconv.Atoi(split[length-2])
+				lengthInt, err := strconv.Atoi(split[length-2])
 				if err != nil {
 					return "", "", err
 				}
-				if length_int <= Config.AlacMax {
-					if !debug_mode && !more_mode {
+				if lengthInt <= Config.AlacMax {
+					if !debugMode && !moreMode {
 						fmt.Printf("%s-bit / %s Hz\n", split[length-1], split[length-2])
 					}
 					streamUrlTemp, err := masterUrl.Parse(variant.URI)
@@ -2399,7 +2399,7 @@ func extractMedia(b string, more_mode bool) (string, string, error) {
 						panic(err)
 					}
 					streamUrl = streamUrlTemp
-					KHZ := float64(length_int) / 1000.0
+					KHZ := float64(lengthInt) / 1000.0
 					Quality = fmt.Sprintf("%sB-%.1fkHz", split[length-1], KHZ)
 					break
 				}
@@ -2488,7 +2488,7 @@ func ripSong(songId string, token string, storefront string, mediaUserToken stri
 	albumId := songData.Relationships.Albums.Data[0].ID
 
 	// Use album approach but only download the specific song
-	dl_song = true
+	dlSong = true
 	err = ripAlbum(albumId, token, storefront, mediaUserToken, songId)
 	if err != nil {
 		fmt.Println("Failed to rip song:", err)
