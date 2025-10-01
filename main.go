@@ -1018,15 +1018,13 @@ func ripStation(albumId string, token string, storefront string, mediaUserToken 
 		singerFoldername = strings.TrimSpace(singerFoldername)
 		fmt.Println(singerFoldername)
 	}
-	singerFolder := filepath.Join(Config.AlacSaveFolder, forbiddenNames.ReplaceAllString(singerFoldername, "_"))
-	if dl_atmos {
-		singerFolder = filepath.Join(Config.AtmosSaveFolder, forbiddenNames.ReplaceAllString(singerFoldername, "_"))
-	}
-	if dl_aac {
-		singerFolder = filepath.Join(Config.AacSaveFolder, forbiddenNames.ReplaceAllString(singerFoldername, "_"))
-	}
-	os.MkdirAll(singerFolder, os.ModePerm)
-	station.SaveDir = singerFolder
+
+	currentDir, _ := os.Getwd()
+	downloadsDir := filepath.Join(currentDir, "downloads")
+	os.MkdirAll(downloadsDir, os.ModePerm)
+	station.SaveDir = downloadsDir
+	stationFolder := filepath.Join(downloadsDir, forbiddenNames.ReplaceAllString(station.Name, "_"))
+	os.MkdirAll(stationFolder, os.ModePerm)
 
 	playlistFolder := strings.NewReplacer(
 		"{ArtistName}", "Apple Music Station",
@@ -1040,7 +1038,7 @@ func ripStation(albumId string, token string, storefront string, mediaUserToken 
 		playlistFolder = strings.ReplaceAll(playlistFolder, ".", "")
 	}
 	playlistFolder = strings.TrimSpace(playlistFolder)
-	playlistFolderPath := filepath.Join(singerFolder, forbiddenNames.ReplaceAllString(playlistFolder, "_"))
+	playlistFolderPath := filepath.Join(downloadsDir, forbiddenNames.ReplaceAllString(playlistFolder, "_"))
 	os.MkdirAll(playlistFolderPath, os.ModePerm)
 	station.SaveName = playlistFolder
 	fmt.Println(playlistFolder)
@@ -1251,15 +1249,11 @@ func ripAlbum(albumId string, token string, storefront string, mediaUserToken st
 		singerFoldername = strings.TrimSpace(singerFoldername)
 		fmt.Println(singerFoldername)
 	}
-	singerFolder := filepath.Join(Config.AlacSaveFolder, forbiddenNames.ReplaceAllString(singerFoldername, "_"))
-	if dl_atmos {
-		singerFolder = filepath.Join(Config.AtmosSaveFolder, forbiddenNames.ReplaceAllString(singerFoldername, "_"))
-	}
-	if dl_aac {
-		singerFolder = filepath.Join(Config.AacSaveFolder, forbiddenNames.ReplaceAllString(singerFoldername, "_"))
-	}
-	os.MkdirAll(singerFolder, os.ModePerm)
-	album.SaveDir = singerFolder
+
+	currentDir, _ := os.Getwd()
+	downloadsDir := filepath.Join(currentDir, "downloads")
+	os.MkdirAll(downloadsDir, os.ModePerm)
+	album.SaveDir = downloadsDir
 	var Quality string
 	if strings.Contains(Config.AlbumFolderFormat, "Quality") {
 		if dl_atmos {
@@ -1333,13 +1327,13 @@ func ripAlbum(albumId string, token string, storefront string, mediaUserToken st
 		albumFolderName = strings.ReplaceAll(albumFolderName, ".", "")
 	}
 	albumFolderName = strings.TrimSpace(albumFolderName)
-	albumFolderPath := filepath.Join(singerFolder, forbiddenNames.ReplaceAllString(albumFolderName, "_"))
+	albumFolderPath := filepath.Join(downloadsDir, forbiddenNames.ReplaceAllString(albumFolderName, "_"))
 	os.MkdirAll(albumFolderPath, os.ModePerm)
 	album.SaveName = albumFolderName
 	fmt.Println(albumFolderName)
 	if Config.SaveArtistCover {
 		if len(meta.Data[0].Relationships.Artists.Data) > 0 {
-			_, err = writeCover(singerFolder, "folder", meta.Data[0].Relationships.Artists.Data[0].Attributes.Artwork.Url)
+			_, err = writeCover(downloadsDir, "folder", meta.Data[0].Relationships.Artists.Data[0].Attributes.Artwork.Url)
 			if err != nil {
 				fmt.Println("Failed to write artist cover.")
 			}
@@ -1516,15 +1510,11 @@ func ripPlaylist(playlistId string, token string, storefront string, mediaUserTo
 		singerFoldername = strings.TrimSpace(singerFoldername)
 		fmt.Println(singerFoldername)
 	}
-	singerFolder := filepath.Join(Config.AlacSaveFolder, forbiddenNames.ReplaceAllString(singerFoldername, "_"))
-	if dl_atmos {
-		singerFolder = filepath.Join(Config.AtmosSaveFolder, forbiddenNames.ReplaceAllString(singerFoldername, "_"))
-	}
-	if dl_aac {
-		singerFolder = filepath.Join(Config.AacSaveFolder, forbiddenNames.ReplaceAllString(singerFoldername, "_"))
-	}
-	os.MkdirAll(singerFolder, os.ModePerm)
-	playlist.SaveDir = singerFolder
+
+	currentDir, _ := os.Getwd()
+	downloadsDir := filepath.Join(currentDir, "downloads")
+	os.MkdirAll(downloadsDir, os.ModePerm)
+	playlist.SaveDir = downloadsDir
 
 	var Quality string
 	if strings.Contains(Config.AlbumFolderFormat, "Quality") {
@@ -1592,7 +1582,7 @@ func ripPlaylist(playlistId string, token string, storefront string, mediaUserTo
 		playlistFolder = strings.ReplaceAll(playlistFolder, ".", "")
 	}
 	playlistFolder = strings.TrimSpace(playlistFolder)
-	playlistFolderPath := filepath.Join(singerFolder, forbiddenNames.ReplaceAllString(playlistFolder, "_"))
+	playlistFolderPath := filepath.Join(downloadsDir, forbiddenNames.ReplaceAllString(playlistFolder, "_"))
 	os.MkdirAll(playlistFolderPath, os.ModePerm)
 	playlist.SaveName = playlistFolder
 	fmt.Println(playlistFolder)
@@ -1972,11 +1962,10 @@ func mvDownloader(adamID string, saveDir string, token string, storefront string
 		fmt.Println("\u26A0 Failed to get MV manifest:", err)
 		return nil
 	}
-
-	if strings.HasSuffix(saveDir, ".") {
-		saveDir = strings.ReplaceAll(saveDir, ".", "")
-	}
-	saveDir = strings.TrimSpace(saveDir)
+	
+	currentDir, _ := os.Getwd()
+	saveDir = filepath.Join(currentDir, "downloads")
+	os.MkdirAll(saveDir, os.ModePerm)
 
 	vidPath := filepath.Join(saveDir, fmt.Sprintf("%s_vid.mp4", adamID))
 	audPath := filepath.Join(saveDir, fmt.Sprintf("%s_aud.mp4", adamID))
